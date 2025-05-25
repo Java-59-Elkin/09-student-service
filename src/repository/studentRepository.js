@@ -1,25 +1,10 @@
-import dotenv from "dotenv";
-import {MongoClient} from "mongodb";
-dotenv.config();
-
-const dbName = 'java59';
-const client = new MongoClient(process.env.MONGODB_URI);
 let collection;
 
-export async function connect(){
-    // if(!(client.topology && client.topology.isConnected())) {
-    //     await client.connect();
-    // }
-    if(!(client.topology?.isConnected())) {
-        await client.connect();
-    }
-
-    const db = client.db(dbName);
+export function init(db) {
     collection = db.collection("college");
 }
 
 export const addStudent = async ({id, name, password}) => {
-    await connect();
     const existing = await collection.findOne({_id: id});
     if (existing) {
         return false;
@@ -29,12 +14,10 @@ export const addStudent = async ({id, name, password}) => {
 }
 
 export const findStudent = async (id) => {
-    await connect();
     return await collection.findOne({_id: id});
 }
 
 export const deleteStudent = async (id) => {
-    await connect();
     const student = await collection.findOneAndDelete({_id: id});
     if (student) {
         return student;
@@ -42,7 +25,6 @@ export const deleteStudent = async (id) => {
 }
 
 export const updateStudent = async (id, data) => {
-    await connect();
     return await collection.findOneAndUpdate(
         {_id: id},
         {$set: data},
@@ -51,7 +33,6 @@ export const updateStudent = async (id, data) => {
 }
 
 export const addScore = async (id, exam, score) => {
-    await connect();
     return await collection.findOneAndUpdate(
         {_id: id},
         {$set: {[`scores.${exam}`]: score}},
@@ -59,15 +40,23 @@ export const addScore = async (id, exam, score) => {
 }
 
 export const findByName = async (name) => {
-    await connect();
     return await collection.find({name: {$regex: `${name}`, $options: 'i'}}).toArray();
 }
 
-// export const countByNames = (names) => {
-//     names = names.map(name => name.toLowerCase());
-//     return Array.from(students.values()).filter(s => names.includes(s.name.toLowerCase())).length;
-// }
-//
-// export const findByMinScore = (exam, minScore) => {
-//     return Array.from(students.values()).filter(s => s.scores[exam] >= minScore);
-// }
+export const countByNames = async (names) => {
+    const regexes = names.map(name => new RegExp(`^${name}$`, 'i'));
+    const students = await collection.find({ name: { $in: regexes } }).toArray();
+
+    const counts = {};
+    for (const name of names) {
+        const regex = new RegExp(`^${name}$`, 'i');
+        counts[name] = students.filter(s => regex.test(s.name)).length;
+    }
+    return counts;
+};
+
+export const findByMinScore = async (exam, minScore) => {
+    const query = {};
+    query[`scores.${exam}`] = {$gte: minScore};
+    return await collection.find(query).toArray();
+}
