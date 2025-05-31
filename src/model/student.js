@@ -25,15 +25,6 @@ studentSchema.set('toJSON', {
     }
 })
 
-const Student = mongoose.model("Student", studentSchema, 'college');
+const Student = mongoose.model("Student", studentSchema, 'students');
 export default Student;
 
-
-// export class Student {
-//     constructor(id, name, password) {
-//         this.id = id;
-//         this.name = name;
-//         this.password = password;
-//         this.scores = {};
-//     }
-// }
